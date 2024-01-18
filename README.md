@@ -26,4 +26,8 @@ Information about the firmware
 https://github.com/georgerobotics/cyw43-driver/tree/main/firmware
 ```
 
+Not only is the communication between the Pico and the CYW43439 a challenge, getting the CYW434349 programmed and running is complex.   
+The chip needs to be programmed with WIFI firmware, then some nvram settings and then the bluetooth firmware (which is in an interestingly complex format).   
+(Luckily it seems the CLM database may not be needed for bluetooth operation)    
 
+Much isn't documented so is based on code in the other drivers.   
