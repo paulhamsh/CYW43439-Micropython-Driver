@@ -388,11 +388,13 @@ def set_backplane_address(addr):
     addr_med  = (addr & 0x00_ff_00_00) >> 16
     addr_low  = (addr & 0x00_00_80_00) >> 8
 
+    '''
     if ((addr_high != backplane_prev_address_high) or
         (addr_med  != backplane_prev_address_med ) or
         (addr_low  != backplane_prev_address_low )):
         print("++++ Backplane now 0x{0:08X}".format(addr & 0xff_ff_80_00))
-
+    '''
+    
     if addr_high != backplane_prev_address_high:
         cyw_write_reg_u8(BACK_FUNC, BACKPLANE_HIGH_REG, addr_high)
         backplane_prev_address_high = addr_high
@@ -459,7 +461,6 @@ def check_core(core):
     
     read = cyw_read_backplane_reg_u8(core_base + AI_RESETCTRL_OFFSET)
     if read & AIRC_RESET:
-        
         print("---- Core", core_name, "in reset")
         
 def reset_core(core):
@@ -476,7 +477,7 @@ def reset_core(core):
 def check_core_up(core):
     core_base, core_name = core_address(core)
     
-    print("---- Checking core", core_name) 
+    #print("---- Checking core", core_name) 
     read = cyw_read_backplane_reg_u8(core_base + AI_IOCTRL_OFFSET)
     if read & (SICF_FGC | SICF_CLOCK_EN) != SICF_CLOCK_EN:
         print("**** Core", core_name, "not up")
@@ -649,14 +650,14 @@ def setup():
     
     # Try to read FEEDBEAD
     read = cyw_read_reg_u32_swap(SPI_FUNC, FEEDBEAD_REG)
-    print_hex_val_u32(">>>> SPI transfer read", read)
+    print_hex_val_u32("---- SPI transfer read", read)
 
     # Set configuration
     config = WORD_LENGTH_32 | BIG_ENDIAN | HIGH_SPEED | INT_POLARITY_HIGH | WAKE_UP | INTR_WITH_STATUS
     cyw_write_reg_u32_swap(SPI_FUNC, CONFIG_REG, config) 
     sleep_ms(500)
     
-    print(">>>> Set backplane read padding value")
+    # Set backplane read padding value
     cyw_write_reg_u8(SPI_FUNC, BACKPLANE_PAD_REG, BACKPLANE_PAD_VALUE)     
     
     # Clear interrupt bits
@@ -675,13 +676,13 @@ def setup():
     # Set bluetooth watermark
     cyw_write_reg_u8(BACK_FUNC, SDIO_FUNCTION2_WATERMARK, 0x10)
     read = cyw_read_reg_u8(BACK_FUNC, SDIO_FUNCTION2_WATERMARK)
-    print_hex_val_u8("---- Read u8 watermark", read)
+    #print_hex_val_u8("---- Read u8 watermark", read)
     if (read != 0x10):
         print("**** Set bluetooth watermark failed")
         
     # Check ALP available
     read = cyw_read_reg_u8(BACK_FUNC, SDIO_CHIP_CLOCK_CSR)
-    print_hex_val_u8("---- Read chip clock csr", read & SBSDIO_ALP_AVAIL)
+    #print_hex_val_u8("---- Read chip clock csr", read & SBSDIO_ALP_AVAIL)
     if (read & SBSDIO_ALP_AVAIL == 0):
         print("**** Check ALP available failed")    
 
