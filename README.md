@@ -46,12 +46,12 @@ Also the Soft SPI expects different pins for MOSI and MISO, and the class sets M
 This code handles that, and picks up the first bit, but will require a shift of that bit into the other read bytes.   
 ```
 cs.value(0)
-    spi = SoftSPI(baudrate=10000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(4))
-    spi.write(w)
-    data_pin = Pin(24, Pin.IN)
-    bit = data_pin.value()  # read that first bit which SoftSPI will miss
-    spi = SoftSPI(baudrate=1000000, polarity=1, phase=1, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
-    read = spi.read(20)     # read the other bits - but remember this is now mis-aligned
+spi = SoftSPI(baudrate=10000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(4))
+spi.write(w)
+data_pin = Pin(24, Pin.IN)
+bit = data_pin.value()  # read that first bit which SoftSPI will miss
+spi = SoftSPI(baudrate=1000000, polarity=1, phase=1, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
+read = spi.read(20)     # read the other bits - but remember this is now mis-aligned
 ```
 
 <p align="center">
