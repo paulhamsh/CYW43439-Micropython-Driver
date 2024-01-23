@@ -40,7 +40,7 @@ The SPI interface is unusual. This is explained well here https://iosoft.blog/20
 This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read as the clock rises. I can't find a way to get the read to pick up that first bit.    
 This manifests in a read of the FEEDBEAD (which is BEADFEED in 32 bit LE) picking up 7D5BFDDA, which is the same value missing the first bit.   
 
-Also the Soft SPI expects different pins for MOSI and MISO, and the class sets MISO last - resulting in the pin being set to input and therefore unable to write any data at all.   
+Also the Soft SPI expects different pins for MOSI and MISO, and the class sets MISO last - resulting in the pin being set to input and therefore unable to write any data at all.    
 This code handles that, and picks up the first bit, but will require a shift of that bit into the other read bytes.   
 ```
 cs.value(0)
