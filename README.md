@@ -1,12 +1,12 @@
 # CYW43439-Micropython-Driver
-**A driver for CYW43439 (Pico Pi W) completely in Micropython**
+##A driver for CYW43439 (Pico Pi W) completely in Micropython
 
 Collated from information found on google and in a variety of repositories on github.   
 All code is original based on these sources.  
 Also includes some investigatory work on how access to the CWY43439 works from the SPI layer up.  
 
 
-**Sources**
+##Sources
 Really useful sources. 
 Most only talk about getting WIFI to work, and bluetooth is an additional set of code.   
 
@@ -34,7 +34,7 @@ The chip needs to be programmed with WIFI firmware, then some nvram settings and
 
 Much isn't documented so is based on code in the other drivers.   
 
-**SPI timings**
+##SPI timings
 
 The SPI interface is unusual. This is explained well here https://iosoft.blog/2022/12/06/picowi/ and results writes being clocked on the falling clock edge, and reads being clocked on the rising clock edge.    
 This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read as the clock rises. I can't find a way to get the read to pick up that first bit.    
