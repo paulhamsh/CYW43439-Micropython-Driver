@@ -36,7 +36,9 @@ Much isn't documented so is based on code in the other drivers.
 
 ## SPI timings
 
-The SPI interface is unusual. This is explained well here https://iosoft.blog/2022/12/06/picowi/ and results writes being clocked on the falling clock edge, and reads being clocked on the rising clock edge.    
+The SPI interface is unusual. This is explained well here https://iosoft.blog/2022/12/06/picowi/   
+Write data is put on the bus to be written on the falling clock edge.   
+Data is read on the rising clock edge.   
 This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read as the clock rises. I can't find a way to get the read to pick up that first bit.    
 This manifests in a read of the FEEDBEAD (which is BEADFEED in 32 bit LE) picking up 7D5BFDDA, which is the same value missing the first bit.   
 
