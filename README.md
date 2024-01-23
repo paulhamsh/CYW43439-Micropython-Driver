@@ -53,6 +53,6 @@ cs.value(0)
 ```
 
 <p align="center">
-  <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/CYW Timing.jpg" width="700" title="connections">
+  <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing.jpg" width="700" title="Timings">
 </p>
 
