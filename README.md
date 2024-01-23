@@ -10,7 +10,7 @@ Also includes some investigatory work on how access to the CWY43439 works from t
 Really useful sources. 
 Most only talk about getting WIFI to work, and bluetooth is an additional set of code.   
 
-```
+
 Infineon data sheet
 https://www.infineon.com/dgdl/Infineon-CYW43439-DataSheet-v05_00-EN.pdf?fileId=8ac78c8c8929aa4d01893ee30e391f7a
 or from here via 'download' button
@@ -26,7 +26,7 @@ https://iosoft.blog/2022/12/06/picowi/
 
 Information about the firmware
 https://github.com/georgerobotics/cyw43-driver/tree/main/firmware
-```
+
 
 Not only is the communication between the Pico and the CYW43439 a challenge, getting the CYW434349 programmed and running is complex.   
 The chip needs to be programmed with WIFI firmware, then some nvram settings and then the bluetooth firmware (which is in an interestingly complex format).   
