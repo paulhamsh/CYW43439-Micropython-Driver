@@ -19,7 +19,7 @@ https://www.infineon.com/cms/en/product/wireless-connectivity/airoc-wi-fi-plus-b
 Code
 Pico SDK C  https://github.com/raspberrypi/pico-sdk/tree/master/src/rp2_common/pico_cyw43_driver     
 Rust        https://github.com/embassy-rs/embassy/tree/main/cyw43     
-Go    \t      https://github.com/soypat/cyw43439     
+Go          https://github.com/soypat/cyw43439     
 
 Documents
 https://iosoft.blog/2022/12/06/picowi/     
