@@ -37,9 +37,9 @@ Much isn't documented so is based on code in the other drivers.
 ## SPI timings
 
 The SPI interface is unusual. This is explained well here https://iosoft.blog/2022/12/06/picowi/   
-Write data is put on the bus to be written on the falling clock edge.   
-Data is read on the rising clock edge.   
-This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read as the clock rises. I can't find a way to get the read to pick up that first bit.    
+Write data is put on the bus to be read by the CYW on the rising clock edge.       
+Data from the CYW is read on the falling clock edge.   
+This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read the first bit as the clock falls. I can't find a way to get the read to pick up that first bit.    
 This manifests in a read of the FEEDBEAD (which is BEADFEED in 32 bit LE) picking up 7D5BFDDA, which is the same value missing the first bit.   
 
 Also the Soft SPI expects different pins for MOSI and MISO, and the class sets MISO last - resulting in the pin being set to input and therefore unable to write any data at all.    
