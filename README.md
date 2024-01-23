@@ -51,3 +51,8 @@ cs.value(0)
     spi = SoftSPI(baudrate=1000000, polarity=1, phase=1, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
     read = spi.read(20)     # read the other bits - but remember this is now mis-aligned
 ```
+
+<p align="center">
+  <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/CYW Timing.jpg" width="700" title="connections">
+</p>
+
