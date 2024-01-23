@@ -5,6 +5,8 @@ Collated from information found on google and in a variety of repositories on gi
 All code is original based on these sources.  
 Also includes some investigatory work on how access to the CWY43439 works from the SPI layer up.  
 
+
+**Sources**
 Really useful sources. 
 Most only talk about getting WIFI to work, and bluetooth is an additional set of code.   
 
@@ -31,3 +33,21 @@ The chip needs to be programmed with WIFI firmware, then some nvram settings and
 (Luckily it seems the CLM database may not be needed for bluetooth operation)    
 
 Much isn't documented so is based on code in the other drivers.   
+
+**SPI timings**
+
+The SPI interface is unusual. This is explained well here https://iosoft.blog/2022/12/06/picowi/ and results writes being clocked on the falling clock edge, and reads being clocked on the rising clock edge.    
+This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read as the clock rises. I can't find a way to get the read to pick up that first bit.    
+This manifests in a read of the FEEDBEAD (which is BEADFEED in 32 bit LE) picking up 7D5BFDDA, which is the same value missing the first bit.   
+
+Also the Soft SPI expects different pins for MOSI and MISO, and the class sets MISO last - resulting in the pin being set to input and therefore unable to write any data at all.   
+This code handles that, and picks up the first bit, but will require a shift of that bit into the other read bytes.   
+```
+cs.value(0)
+    spi = SoftSPI(baudrate=10000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(4))
+    spi.write(w)
+    data_pin = Pin(24, Pin.IN)
+    bit = data_pin.value()  # read that first bit which SoftSPI will miss
+    spi = SoftSPI(baudrate=1000000, polarity=1, phase=1, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
+    read = spi.read(20)     # read the other bits - but remember this is now mis-aligned
+```
