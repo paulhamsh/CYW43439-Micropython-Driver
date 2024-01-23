@@ -13,7 +13,7 @@ Most only talk about getting WIFI to work, and bluetooth is an additional set of
 
 Infineon data sheet
 https://www.infineon.com/dgdl/Infineon-CYW43439-DataSheet-v05_00-EN.pdf?fileId=8ac78c8c8929aa4d01893ee30e391f7a    
-or from here via 'download' button
+or from here via 'download' button     
 https://www.infineon.com/cms/en/product/wireless-connectivity/airoc-wi-fi-plus-bluetooth-combos/wi-fi-4-802.11n/cyw43439/    
 
 Code
