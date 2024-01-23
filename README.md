@@ -54,7 +54,7 @@ spi = SoftSPI(baudrate=1000000, polarity=1, phase=1, sck=Pin(29), mosi=Pin(24), 
 read = spi.read(20)     # read the other bits - but remember this is now mis-aligned
 ```
 
-The SPI code (micropython/drivers/bus/softspi.c) does this
+The SPI code (https://github.com/micropython/micropython/blob/master/drivers/bus/softspi.c) does this
 ```
 case MP_SPI_IOCTL_INIT:
     mp_hal_pin_write(self->sck, self->polarity);
