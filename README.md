@@ -16,7 +16,7 @@ https://www.infineon.com/dgdl/Infineon-CYW43439-DataSheet-v05_00-EN.pdf?fileId=8
 or from here via 'download' button     
 https://www.infineon.com/cms/en/product/wireless-connectivity/airoc-wi-fi-plus-bluetooth-combos/wi-fi-4-802.11n/cyw43439/    
 
-Code
+Code     
 Pico SDK C  https://github.com/raspberrypi/pico-sdk/tree/master/src/rp2_common/pico_cyw43_driver     
 Rust        https://github.com/embassy-rs/embassy/tree/main/cyw43     
 Go          https://github.com/soypat/cyw43439     
