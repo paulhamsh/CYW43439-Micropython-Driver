@@ -54,6 +54,17 @@ spi = SoftSPI(baudrate=1000000, polarity=1, phase=1, sck=Pin(29), mosi=Pin(24), 
 read = spi.read(20)     # read the other bits - but remember this is now mis-aligned
 ```
 
+The SPI code does this
+```
+        case MP_SPI_IOCTL_INIT:
+            mp_hal_pin_write(self->sck, self->polarity);
+            mp_hal_pin_output(self->sck);
+            mp_hal_pin_output(self->mosi);
+            mp_hal_pin_input(self->miso);
+            break;
+```
+So will change the clock value and ensure that MISO is an input.    
+
 <p align="center">
   <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing.jpg" width="700" title="Timings">
 </p>
