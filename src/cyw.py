@@ -224,22 +224,39 @@ def power_off():
     pwr.value(0)
 
 # Core SPI data transmission
-'''
 from machine import SoftSPI
-spi = SoftSPI(baudrate=1000, polarity=1, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
 
+# 01111101010110111111110111011010   Lost the first bit :-(
+# 10111110101011011111111011101101   BEAD FEED
+
+# SoftSPI rather than python bit-bashing
 def spi_transfer(write, write_length, read_length):
-    spi.init(baudrate=1000)
     cs.value(0)
-    readbuf = bytearray(read_length)
-    spi.write(write[0:write_length])
-    if read_length > 0:
-        spi.readinto(readbuf)
-    cs.value(1)    
-    return bytes(readbuf)
-'''    
+    spi = SoftSPI(baudrate=50000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
+    data_pin = Pin(24, Pin.OUT)  # because constructor makes it IN as its last IOCTL action
+    spi.write(write)
     
+    new_read = b''
+    if read_length > 0:
+        data_pin = Pin(24, Pin.IN)
+        bit = data_pin.value()
+        read = spi.read(read_length)
+        new_read = b''
+        carry_in = bit
+        for b in read:
+            v = int(b)
+            carry_out = v & 1
+            v >>= 1
+            if carry_in:
+                v |= 128
+            carry_in = carry_out
+            new_read += bytes([v])
+        
+    cs.value(1)
+    return bytes(new_read)
+'''
 
+# Python bit-bashing SPI
 def spi_transfer(write, write_length, read_length):
     clk.value(0)
     cs.value(0)
@@ -272,7 +289,7 @@ def spi_transfer(write, write_length, read_length):
         read.append(byt)
     cs.value(1)
     return bytes(read)
-
+'''
 # Data conversion and byte swapping
 # For swap_words, this changes the ordering from b0 b1 b2 b3 to b1 b0 b3 b2
 # So the test register is stored as BE AD FE ED, which is then swapped to AD BE ED FE (bytes)
@@ -392,12 +409,12 @@ def set_backplane_address(addr):
     addr_med  = (addr & 0x00_ff_00_00) >> 16
     addr_low  = (addr & 0x00_00_80_00) >> 8
 
-    
+
     if ((addr_high != backplane_prev_address_high) or
         (addr_med  != backplane_prev_address_med ) or
         (addr_low  != backplane_prev_address_low )):
         print("++++ Backplane now 0x{0:08X}".format(addr & 0xff_ff_80_00))
-    
+
     
     if addr_high != backplane_prev_address_high:
         cyw_write_reg_u8(BACK_FUNC, BACKPLANE_HIGH_REG, addr_high)
@@ -647,7 +664,7 @@ def write_bt_firmware():
 
 def setup():
     # Send empty bytes to clear 4-bit buffer
-    read = spi_transfer(b'x00', 1, 0)  # Just to clear the 4bit extra needed
+    read = spi_transfer(b'\x00', 1, 0)  # Just to clear the 4bit extra needed
     
     # Try to read FEEDBEAD
     read = cyw_read_reg_u32_swap(SPI_FUNC, FEEDBEAD_REG)
@@ -725,7 +742,7 @@ def setup():
     while (read & SBSDIO_HT_AVAIL) == 0:
         #print_hex_val_u8("---- HT AVAIL", read)
         print(".... Failed HT clock")
-        sleep_ms(10000)
+        sleep_ms(200)
         read = cyw_read_reg_u8(BACK_FUNC, SDIO_CHIP_CLOCK_CSR)
     
     # Set interrupt mask
@@ -740,7 +757,7 @@ def setup():
     while (read & STATUS_F2_RX_READY) == 0:
         #print_hex_val_u8("---- F2 AVAIL", read)
         print(".... Failed F2 ready")
-        sleep_ms(1000)
+        sleep_ms(200)
         read = cyw_read_reg_u8(SPI_FUNC, SPI_STATUS_REG)
  
     # Change pad pull up
@@ -922,4 +939,5 @@ class CYW:
         receive_head = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_HEAD)
         receive_tail = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_TAIL)
         return (receive_head != receive_tail)
-      
+        
+        
