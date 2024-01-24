@@ -226,11 +226,29 @@ def power_off():
 # Core SPI data transmission
 from machine import SoftSPI
 
+
+# Normal SPI, not HIGH_SPEED
+def spi_transfer_softSPI(write, write_length, read_length):
+    cs.value(0)
+    spi = SoftSPI(baudrate=50000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
+    data_pin = Pin(24, Pin.OUT)  # because constructor makes it IN as its last IOCTL action
+    spi.write(write)
+    
+    new_read = b''
+    if read_length > 0:
+        data_pin = Pin(24, Pin.IN)
+        new_read = spi.read(read_length)
+        
+    cs.value(1)
+    return bytes(new_read)
+
+
+# SoftSPI rather than python bit-bashing, but customised for HIGH_SPEED
+
 # 01111101010110111111110111011010   Lost the first bit :-(
 # 10111110101011011111111011101101   BEAD FEED
 
-# SoftSPI rather than python bit-bashing
-def spi_transfer(write, write_length, read_length):
+def spi_transfer_softSPI_HIGH_SPEED(write, write_length, read_length):
     cs.value(0)
     spi = SoftSPI(baudrate=50000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
     data_pin = Pin(24, Pin.OUT)  # because constructor makes it IN as its last IOCTL action
@@ -254,10 +272,10 @@ def spi_transfer(write, write_length, read_length):
         
     cs.value(1)
     return bytes(new_read)
-'''
 
-# Python bit-bashing SPI
-def spi_transfer(write, write_length, read_length):
+# Python bit-bashing SPI customised for HIGH_SPEED
+
+def spi_transfer_bit_bash__HIGH_SPEED(write, write_length, read_length):
     clk.value(0)
     cs.value(0)
     data_pin = Pin(24, Pin.OUT)
@@ -289,7 +307,12 @@ def spi_transfer(write, write_length, read_length):
         read.append(byt)
     cs.value(1)
     return bytes(read)
-'''
+
+
+# Select the one to use
+def spi_transfer(write, write_length, read_length):
+    return spi_transfer_softSPI(write, write_length, read_length)
+
 # Data conversion and byte swapping
 # For swap_words, this changes the ordering from b0 b1 b2 b3 to b1 b0 b3 b2
 # So the test register is stored as BE AD FE ED, which is then swapped to AD BE ED FE (bytes)
@@ -318,8 +341,9 @@ def u32_to_le_bytes(int_val):
     return bytes(b)
 
 def round_to_four(val):
-    # adj_val = (val + 3) & ~3       # round u
-    return ((val / 4) + 1) * 4
+    adj_val = (val + 3) & ~3       # round up
+    return adj_val
+    #return ((val / 4) + 1) * 4
 
 # Function to make the command for gSPI
 
@@ -666,14 +690,29 @@ def setup():
     # Send empty bytes to clear 4-bit buffer
     read = spi_transfer(b'\x00', 1, 0)  # Just to clear the 4bit extra needed
     
+    # Set configuration
+    
+    # This is WITHOUT HIGH_SPEED so normal SPI works ok
+    config = WORD_LENGTH_32 | BIG_ENDIAN | INT_POLARITY_HIGH | WAKE_UP | INTR_WITH_STATUS
+    cyw_write_reg_u32_swap(SPI_FUNC, CONFIG_REG, config) 
+    sleep_ms(500)
+    
+    # Try to read FEEDBEAD
+    read = cyw_read_reg_u32(SPI_FUNC, FEEDBEAD_REG)
+    print_hex_val_u32("---- SPI transfer read", read)
+
+    '''
+    # This is WITH HIGH_SPEED so normal SPI does not work
     # Try to read FEEDBEAD
     read = cyw_read_reg_u32_swap(SPI_FUNC, FEEDBEAD_REG)
     print_hex_val_u32("---- SPI transfer read", read)
 
-    # Set configuration
+    
+    # Set configuration WITH HIGH_SPEED so need customised SPI
     config = WORD_LENGTH_32 | BIG_ENDIAN | HIGH_SPEED | INT_POLARITY_HIGH | WAKE_UP | INTR_WITH_STATUS
     cyw_write_reg_u32_swap(SPI_FUNC, CONFIG_REG, config) 
     sleep_ms(500)
+    '''
     
     # Set backplane read padding value
     cyw_write_reg_u8(SPI_FUNC, BACKPLANE_PAD_REG, BACKPLANE_PAD_VALUE)     
