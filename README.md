@@ -39,8 +39,13 @@ Much isn't documented so is based on code in the other drivers.
 The SPI interface is unusual in the setup most code uses - referre to as HICH_SPEED mode. This is explained well here https://iosoft.blog/2022/12/06/picowi/   and shown in the timing chart below.    
 
 <p align="center">
-  <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing.jpg" width="700" title="Timings">
+  <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing High Speed.jpg" width="700" title="Timings">
 </p>
+
+<p align="center">
+  <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing Normal Speed.jpg" width="700" title="Timings">
+</p>
+
 
 Write data is put on the bus to be read by the CYW on the rising clock edge.       
 Data from the CYW is read on the falling clock edge.   
