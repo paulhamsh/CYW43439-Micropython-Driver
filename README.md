@@ -65,7 +65,21 @@ This also removed the need for any further 'swap' caused by little endian / big 
 ```
 
 Also the Soft SPI expects different pins for MOSI and MISO, and the class sets MISO last - resulting in the pin being set to input and therefore unable to write any data at all.    
-  
+
+The SPI code (https://github.com/micropython/micropython/blob/master/drivers/bus/softspi.c) does this
+
+```
+case MP_SPI_IOCTL_INIT:
+    mp_hal_pin_write(self->sck, self->polarity);
+    mp_hal_pin_output(self->sck);
+    mp_hal_pin_output(self->mosi);
+    mp_hal_pin_input(self->miso);
+    break;
+```
+
+So will change the clock value and ensure that MISO is an input.
+
+This code manually sets the Pin directions and therefore works fine, once HIGH_SPEED mode is removed.   
 ```
 cs.value(0)
 spi = SoftSPI(baudrate=10000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
@@ -75,16 +89,7 @@ data_pin = Pin(24, Pin.IN)
 read = spi.read(20)     # read the other bits - but remember this is now mis-aligned
 ```
 
-The SPI code (https://github.com/micropython/micropython/blob/master/drivers/bus/softspi.c) does this
-```
-case MP_SPI_IOCTL_INIT:
-    mp_hal_pin_write(self->sck, self->polarity);
-    mp_hal_pin_output(self->sck);
-    mp_hal_pin_output(self->mosi);
-    mp_hal_pin_input(self->miso);
-    break;
-```
-So will change the clock value and ensure that MISO is an input.    
+    
 
 <p align="center">
   <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing.jpg" width="700" title="Timings">
