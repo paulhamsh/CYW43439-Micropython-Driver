@@ -86,12 +86,19 @@ So will change the clock value and ensure that MISO is an input.
 
 This code manually sets the Pin directions and therefore works fine, once HIGH_SPEED mode is removed.   
 ```
-cs.value(0)
-spi = SoftSPI(baudrate=10000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
-data_pin = Pin(24, Pin.OUT)
-spi.write(w)
-data_pin = Pin(24, Pin.IN)
-read = spi.read(20)     # read the other bits - but remember this is now mis-aligned
+def spi_transfer_softSPI(write, write_length, read_length):
+    cs.value(0)
+    spi = SoftSPI(baudrate=50000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
+    data_pin = Pin(24, Pin.OUT)  # because constructor makes it IN as its last IOCTL action
+    spi.write(write)
+    
+    new_read = b''
+    if read_length > 0:
+        data_pin = Pin(24, Pin.IN)
+        new_read = spi.read(read_length)
+        
+    cs.value(1)
+    return bytes(new_read)
 ```
 
     
