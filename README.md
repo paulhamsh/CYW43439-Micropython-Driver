@@ -36,21 +36,42 @@ Much isn't documented so is based on code in the other drivers.
 
 ## SPI timings
 
-The SPI interface is unusual. This is explained well here https://iosoft.blog/2022/12/06/picowi/   
+The SPI interface is unusual in the setup most code uses - referre to as HICH_SPEED mode. This is explained well here https://iosoft.blog/2022/12/06/picowi/   and shown in the timing chart below.    
+
+<p align="center">
+  <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing.jpg" width="700" title="Timings">
+</p>
+
 Write data is put on the bus to be read by the CYW on the rising clock edge.       
 Data from the CYW is read on the falling clock edge.   
-This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read the first bit as the clock falls. I can't find a way to get the read to pick up that first bit.    
+This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read the first bit as the clock falls. I can't find a way to get the read to pick up that first bit but it can be done manually, and then the whole resulting bytes shifed one bit to the right to accomodate this. Which is slow.    
 This manifests in a read of the FEEDBEAD (which is BEADFEED in 32 bit LE) picking up 7D5BFDDA, which is the same value missing the first bit.   
 
+But, if the start-up sequence is changed to set this without HIGH_SPEED as the second instruction, before the FEEDBEAD check, then normal SPI works.   
+So I have changed the start-up to be a dummy write (to clear the 4 bits of data that get added to any first read), then setting the configuration register.   
+This also removed the need for any further 'swap' caused by little endian / big endian changes.   
+
+```
+    # Send empty bytes to clear 4-bit buffer
+    read = spi_transfer(b'\x00', 1, 0)  # Just to clear the 4bit extra needed
+    
+    # Set configuration
+    config = WORD_LENGTH_32 | BIG_ENDIAN | INT_POLARITY_HIGH | WAKE_UP | INTR_WITH_STATUS  #  Not HIGH_SPEED
+    cyw_write_reg_u32_swap(SPI_FUNC, CONFIG_REG, config)
+
+    # Try to read FEEDBEAD
+    read = cyw_read_reg_u32(SPI_FUNC, FEEDBEAD_REG)
+    print_hex_val_u32("---- SPI transfer read", read)
+```
+
 Also the Soft SPI expects different pins for MOSI and MISO, and the class sets MISO last - resulting in the pin being set to input and therefore unable to write any data at all.    
-This code handles that, and picks up the first bit, but will require a shift of that bit into the other read bytes.   
+  
 ```
 cs.value(0)
-spi = SoftSPI(baudrate=10000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(4))
+spi = SoftSPI(baudrate=10000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
+data_pin = Pin(24, Pin.OUT)
 spi.write(w)
 data_pin = Pin(24, Pin.IN)
-bit = data_pin.value()  # read that first bit which SoftSPI will miss
-spi = SoftSPI(baudrate=1000000, polarity=1, phase=1, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
 read = spi.read(20)     # read the other bits - but remember this is now mis-aligned
 ```
 
