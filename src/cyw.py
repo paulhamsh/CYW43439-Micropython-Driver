@@ -127,6 +127,7 @@ AIRC_RESET               = 0x0001
 SOCSRAM_BANKX_INDEX      = SOCSRAM_BASE_ADDRESS + 0x10
 SOCSRAM_BANKX_PDA        = SOCSRAM_BASE_ADDRESS + 0x44
 
+SDIO_INT_STATUS          = SDIO_BASE_ADDRESS + 0x20
 SDIO_INT_HOST_MASK       = SDIO_BASE_ADDRESS + 0x24
 
 I_HMB_SW_MASK            = 0x0000_00f0
@@ -250,7 +251,7 @@ def spi_transfer_softSPI(write, write_length, read_length):
 
 def spi_transfer_softSPI_HIGH_SPEED(write, write_length, read_length):
     cs.value(0)
-    spi = SoftSPI(baudrate=50000000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
+    spi = SoftSPI(baudrate=50_000_000, polarity=0, phase=0, sck=Pin(29), mosi=Pin(24), miso=Pin(24))
     data_pin = Pin(24, Pin.OUT)  # because constructor makes it IN as its last IOCTL action
     spi.write(write)
     
@@ -433,12 +434,12 @@ def set_backplane_address(addr):
     addr_med  = (addr & 0x00_ff_00_00) >> 16
     addr_low  = (addr & 0x00_00_80_00) >> 8
 
-
+    '''
     if ((addr_high != backplane_prev_address_high) or
         (addr_med  != backplane_prev_address_med ) or
         (addr_low  != backplane_prev_address_low )):
         print("++++ Backplane now 0x{0:08X}".format(addr & 0xff_ff_80_00))
-
+    '''
     
     if addr_high != backplane_prev_address_high:
         cyw_write_reg_u8(BACK_FUNC, BACKPLANE_HIGH_REG, addr_high)
@@ -503,7 +504,7 @@ def core_address(core):
 
 def check_core(core):
     core_base, core_name = core_address(core)
-    
+        
     read = cyw_read_backplane_reg_u8(core_base + AI_RESETCTRL_OFFSET)
     if read & AIRC_RESET:
         print("---- Core", core_name, "in reset")
@@ -684,6 +685,44 @@ def write_bt_firmware():
     btfw.close()
 
 
+# BT routines
+
+def data_send_toggle():
+    val = cyw_read_backplane_reg_u32(HOST_CONTROL_REG)
+    val ^= DATA_VALID
+    cyw_write_backplane_reg_u32(HOST_CONTROL_REG, val)
+ 
+def host_ready():
+    val = cyw_read_backplane_reg_u32(HOST_CONTROL_REG)
+    val |= SW_READY
+    cyw_write_backplane_reg_u32(HOST_CONTROL_REG, val)
+    
+def wake_bt():
+    val = cyw_read_backplane_reg_u32(HOST_CONTROL_REG)
+    new_val = val | WAKE_BT
+    if new_val != val:
+        cyw_write_backplane_reg_u32(HOST_CONTROL_REG, new_val)
+
+def is_bt_awake():
+    return cyw_read_backplane_reg_u32(BT_CONTROL_REG) & BT_AWAKE
+
+def wait_bt_awake():
+    while not is_bt_awake():
+        print("BT not awake yet")
+        sleep_ms(500)
+        
+def is_bt_ready():
+    return cyw_read_backplane_reg_u32(BT_CONTROL_REG) & FW_READY
+
+def wait_bt_ready():
+    while not is_bt_ready():
+        print("BT not ready yet")    
+        sleep_ms(500)
+        
+def bus_request():
+    wake_bt()
+    wait_bt_ready()
+
 # Setup WIFI and BT firmware and configuration
 
 def setup():
@@ -706,7 +745,6 @@ def setup():
     # Try to read FEEDBEAD
     read = cyw_read_reg_u32_swap(SPI_FUNC, FEEDBEAD_REG)
     print_hex_val_u32("---- SPI transfer read", read)
-
     
     # Set configuration WITH HIGH_SPEED so need customised SPI
     config = WORD_LENGTH_32 | BIG_ENDIAN | HIGH_SPEED | INT_POLARITY_HIGH | WAKE_UP | INTR_WITH_STATUS
@@ -811,126 +849,11 @@ def setup():
     # Load bluetooth firmware
     cyw_write_backplane_reg_u32(BTFW_MEM_OFFSET + BT2WLAN_PWRUP_ADDR, BT2WLAN_PWRUP_WAKE);
     write_bt_firmware()
+
+    # Start bluetooth
+    host_ready()
+    bus_request()
     
-    print()
-
-# BT routines
-
-def data_send_toggle():
-    val = cyw_read_backplane_reg_u32(HOST_CONTROL_REG)
-    val ^= DATA_VALID
-    cyw_write_backplane_reg_u32(HOST_CONTROL_REG, val)
- 
-def host_ready():
-    val = cyw_read_backplane_reg_u32(HOST_CONTROL_REG)
-    val |= SW_READY
-    cyw_write_backplane_reg_u32(HOST_CONTROL_REG, val)
-    
-def wake_bt():
-    val = cyw_read_backplane_reg_u32(HOST_CONTROL_REG)
-    new_val = val | WAKE_BT
-    if new_val != val:
-        cyw_write_backplane_reg_u32(HOST_CONTROL_REG, new_val)
-
-def is_bt_awake():
-    return cyw_read_backplane_reg_u32(BT_CONTROL_REG) & BT_AWAKE
-
-def wait_bt_awake():
-    while not is_bt_awake():
-        print("BT not awake yet")
-        sleep_ms(500)
-        
-def is_bt_ready():
-    return cyw_read_backplane_reg_u32(BT_CONTROL_REG) & FW_READY
-
-def wait_bt_ready():
-    while not is_bt_ready():
-        print("BT not ready yet")    
-        sleep_ms(500)
-        
-def bus_request():
-    wake_bt()
-    wait_bt_ready()
-    
-
-# HCI routines
-'''
-wifi_base = 0x0 # set this in start-up
-
-def hci_write(dat):
-    # need to add prefix of 3 bytes of length and padding at end to make this word aligned
-    size = len(dat)
-    length_bytes = u32_to_le_bytes(size - 1)[0:3]  # length (excluding the HCI command byte), trimmed to three bytes
-    size += 3                                      # add length of the length_bytes
-    adjusted_size = (size + 3) & ~3                # round up 
-    padding = bytes(adjusted_size - size)          # bytes() of padding
-    
-    buf = length_bytes + dat + padding             # length prefix + data + padding
-    buf_len = len(buf)
-    
-    send_head = cyw_read_backplane_reg_u32(wifi_base + SEND_HEAD)
-    send_tail = cyw_read_backplane_reg_u32(wifi_base + SEND_TAIL)
-    
-    cyw_write_backplane_bytes(wifi_base + H2BT_BUFFER + send_tail, buf, buf_len)
-    cyw_write_backplane_reg_u32(wifi_base + SEND_HEAD, send_tail + buf_len)
-    data_send_toggle()
-
-def hci_read():
-    receive_head = cyw_read_backplane_reg_u32(wifi_base + RECEIVE_HEAD)
-    receive_tail = cyw_read_backplane_reg_u32(wifi_base + RECEIVE_TAIL)
-
-    dat = cyw_read_backplane_bytes(wifi_base + BT2H_BUFFER + receive_tail, receive_head - receive_tail)
-    data_send_toggle() 
-    cyw_write_backplane_reg_u32(wifi_base + RECEIVE_TAIL, receive_head) # move tail to head, clearing read buffer
-    data_send_toggle()
-    
-    leng = le_bytes_to_u32(dat[0:3])     # get length from first 3 bytes
-    return dat[3:3 + leng + 1]           # trim off length 3 byte header and padding bytes trailer
-
-# Main program
-
-power_on()
-setup()
-
-wifi_base = cyw_read_backplane_reg_u32(WLAN_BASE_ADDRESS_REG)
-print_hex_val_u32("WIFI Base", wifi_base)
-
-# BT ready
-host_ready()
-
-# Bus request
-bus_request()
-
-print("HCI SEND RECEIVE")
-# OCF and OGF reference here: https://software-dl.ti.com/simplelink/esd/simplelink_cc13x2_sdk/1.60.00.29_new/exports/docs/ble5stack/vendor_specific_guide/BLE_Vendor_Specific_HCI_Guide/hci_interface.html
-print("SEND x03 x00 x00 x01 x03 x0c x00 x00")
-hci_write(b'\x01\x03\x0c\x00') # 0c03 is Reset (3, 1)
-dat = hci_read()
-print_hex('Received', dat)
-
-print("SEND x03 x00 x00 x01 x01 x10 x00 x00")
-hci_write(b'\x01\x01\x10\x00') # 1001 is Read Local Version Information (4, 1)
-dat = hci_read()
-print_hex('Received', dat)
-
-print("SEND x05 x00 x00 x01 x0c x20 x02 x00 x00")
-hci_write(b'\x01\x0c\x20\x02\x00\x00') # 200c is LE Set Scan Enable (8, 2)
-dat = hci_read()
-print_hex('Received', dat)
-
-print("SEND x03 x00 x00 x01 x03 x0c x00 x00")
-hci_write(b'\x01\x03\x0c\x00')
-dat = hci_read()
-print_hex('Received', dat)
-
-print("SEND x05 x00 x00 x01 x0c x20 x02 x00 x00 x00 x00 x00")
-hci_write(b'\x01\x0c\x20\x02\x00\x00')
-dat = hci_read()
-print_hex('Received', dat)
-
-power_off()
-    
-'''
 
 class CYW:
     def __init__(self):
@@ -938,8 +861,6 @@ class CYW:
         setup()
         self.wifi_base = cyw_read_backplane_reg_u32(WLAN_BASE_ADDRESS_REG)
         print_hex_val_u32("WIFI Base", self.wifi_base)
-        host_ready()
-        bus_request()
         
     def close(self):
         power_off()
@@ -975,8 +896,13 @@ class CYW:
         return dat[3:3 + leng + 1]           # trim off length 3 byte header and padding bytes trailer
 
     def readable(self):
-        receive_head = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_HEAD)
-        receive_tail = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_TAIL)
-        return (receive_head != receive_tail)
-        
-        
+        read = cyw_read_backplane_reg_u32(SDIO_INT_STATUS);
+        data_there = (read & I_HMB_FC_CHANGE != 0)
+        if data_there:
+            cyw_write_backplane_reg_u32(SDIO_INT_STATUS, read & I_HMB_FC_CHANGE)
+            # do double check to make sure data is there in buffer
+            receive_head = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_HEAD)
+            receive_tail = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_TAIL)
+            if receive_head == receive_tail:
+                data_there = False
+        return data_there
