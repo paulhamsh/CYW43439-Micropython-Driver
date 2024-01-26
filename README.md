@@ -13,7 +13,7 @@ ble.adv()
 ble.test()
 ```
 
-```ble.conn()``` looks for a device with address D8:3A:DD:41:84:51 - change this to an address of your device. It also expects that device to send data.   
+```ble.conn()``` looks for a device with address D8:3A:DD:41:84:51 - change this to an address of your device. It also expects that device to send data.   Example code for that is in ```test```.   
 
 ## Sample HCI logging output
 
