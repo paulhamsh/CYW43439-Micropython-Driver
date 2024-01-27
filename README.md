@@ -58,13 +58,13 @@ NORMAL mode is as expected and compatible with the Micropython SoftSPI class.   
 Most drivers seem to leave this in HIGH_SPEED mode.      
 HIGH_SPEED mode is unusual in the MISO read is on a different clock edge from the MOSI write. This is explained well here https://iosoft.blog/2022/12/06/picowi/ and shown in the timing chart below. It adds complexity to a SPI driver code.   
 
-HIGH SPEED mode
+**HIGH SPEED mode**
 
 <p align="center">
   <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing High Speed.jpg" width="700" title="Timings">
 </p>
 
-NORMAL mode
+**NORMAL mode**
 
 <p align="center">
   <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing Normal Speed.jpg" width="700" title="Timings">
