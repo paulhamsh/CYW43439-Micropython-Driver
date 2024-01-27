@@ -19,11 +19,10 @@ ble.test()
 
 
 ## Sources
-Collated from information found on google and in a variety of repositories on github.   
-All code is original based on these sources.  
+Collated from information found on google and in a variety of repositories on github.    
+All code is original based on these sources.   
 Also includes some investigatory work on how access to the CWY43439 works from the SPI layer up.  
 
-Really useful sources. 
 Most only talk about getting WIFI to work, and bluetooth is an additional set of code.   
 
 Infineon data sheet
