@@ -6,6 +6,14 @@ This is a basic HCI BLE capability for the Pico Pi W. It is all in Micropython -
 There is no reliance on any bluetooth stack or CWY43439 driver.    
 It is a bit slow to load up all the firmware.    
 It is BLE only, no other bluetooth and no WIFI - written solely to prove the BLE HCI capability.   
+
+Three files are needed.   
+```
+cyw.py    CYW43439 driver
+ble.py    Bluetooth LE HCI class
+test.py   Test program
+```
+
 Run the ```test.py``` program with one of the three options: 
 ```
 ble.conn()
