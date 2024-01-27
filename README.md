@@ -56,7 +56,9 @@ Much isn't documented so is based on code in the other drivers.
 The SPI interface has two timing modes, and boots in HIGH_SPEED mode.   
 NORMAL mode is as expected and compatible with the Micropython SoftSPI class.   This code sets the CYW into NORMAL mode as the first command write to ensure SoftSPI works normally.   There is also code to handle the HIGH_SPEED mode but it is not used by default.   
 Most drivers seem to leave this in HIGH_SPEED mode.      
-HIGH_SPEED mode is unusual in the MISO read is on a different clock edge from the MOSI write. This is explained well here https://iosoft.blog/2022/12/06/picowi/ and shown in the timing chart below. It adds complexity to a SPI driver code.   
+HIGH_SPEED mode is unusual in the MISO read is on a different clock edge from the MOSI write.   
+This is explained well here https://iosoft.blog/2022/12/06/picowi/ and shown in the timing chart below.    
+It adds complexity to a SPI driver code.   
 
 **HIGH SPEED mode**
 
