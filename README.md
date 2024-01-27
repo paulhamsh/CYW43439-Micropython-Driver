@@ -53,11 +53,18 @@ Much isn't documented so is based on code in the other drivers.
 
 ## SPI timings
 
-The SPI interface is unusual in the setup most code uses - referre to as HICH_SPEED mode. This is explained well here https://iosoft.blog/2022/12/06/picowi/   and shown in the timing chart below.    
+The SPI interface has two timing modes, and boots in HIGH_SPEED mode.   
+NORMAL mode is as expected and compatible with the Micropython SoftSPI class.   This code sets the CYW into NORMAL mode as the first command write to ensure SoftSPI works normally.   There is also code to handle the HIGH_SPEED mode but it is not used by default.   
+Most drivers seem to leave this in HIGH_SPEED mode.      
+HIGH_SPEED mode is unusual in the MISO read is on a different clock edge from the MOSI write. This is explained well here https://iosoft.blog/2022/12/06/picowi/ and shown in the timing chart below. It adds complexity to a SPI driver code.   
+
+HIGH SPEED mode
 
 <p align="center">
   <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing High Speed.jpg" width="700" title="Timings">
 </p>
+
+NORMAL mode
 
 <p align="center">
   <img src="https://github.com/paulhamsh/CYW43439-Micropython-Driver/blob/main/CYW Timing Normal Speed.jpg" width="700" title="Timings">
@@ -66,12 +73,11 @@ The SPI interface is unusual in the setup most code uses - referre to as HICH_SP
 
 Write data is put on the bus to be read by the CYW on the rising clock edge.       
 Data from the CYW is read on the falling clock edge.   
-This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read the first bit as the clock falls. I can't find a way to get the read to pick up that first bit but it can be done manually, and then the whole resulting bytes shifed one bit to the right to accomodate this. Which is slow.    
-This manifests in a read of the FEEDBEAD (which is BEADFEED in 32 bit LE) picking up 7D5BFDDA, which is the same value missing the first bit.   
+This is problematic on the first read bit in the word, because the SoftSPI class in Micropython misses the need to read the first bit as the clock falls. I can't find a way to get the read to pick up that first bit but it can be done manually, and then the whole resulting byte array shifed one bit to the right to accomodate this.       
+This manifests in a read of the read test register (BEADFEED in 32 bit little-endian) receiving 7D5BFDDA - which is the same value missing the first bit.     
 
-But, if the start-up sequence is changed to set this without HIGH_SPEED as the second instruction, before the FEEDBEAD check, then normal SPI works.   
-So I have changed the start-up to be a dummy write (to clear the 4 bits of data that get added to any first read), then setting the configuration register.   
-This also removed the need for any further 'swap' caused by little endian / big endian changes.   
+The start-up ccode here starts with a dummy write (to clear the 4 bits of data that get added to any first read), then setting the configuration register to NORMAL speed.       
+This also removed the need for any further 'swap' caused by little endian / big endian changes, which most drivers use up until the configuration set point.    
 
 ```
     # Send empty bytes to clear 4-bit buffer
@@ -118,7 +124,7 @@ def spi_transfer_softSPI(write, write_length, read_length):
     return bytes(new_read)
 ```
 
-## Sample HCI logging output
+## Sample output of running ```test.py```    
 
 For the ble.conn() example in ble.py
 ```
