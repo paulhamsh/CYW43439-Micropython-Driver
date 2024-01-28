@@ -545,15 +545,15 @@ def write_firmware():
     # CLM is 984
     # Total file size then 232408
 
-    block_size = 16
     remaining = rounded_fw_len
-    chunk_size = 16
+    chunk_size = 64
 
     while remaining > 0:
         if remaining < 16:
             chunk_size = remaining
         dat = fw.read(chunk_size)
         cyw_write_backplane_bytes(address, dat, chunk_size)
+        #print(hex(address))
         #dump_bytes_hex(address, dat)
         address += chunk_size
         remaining -= chunk_size
@@ -570,13 +570,14 @@ def write_nvram():
     top_of_ram_address = 0x00_08_00_00 # 512 * 1204 - top of ram
     magic_address = top_of_ram_address - 4 # place for the magic
     nvram_address = magic_address - rounded_nvram_len
-    
+   
     address = nvram_address
-    block_size = 16
+    #block_size = 16
     remaining = rounded_nvram_len
-    chunk_size = 16
+    #chunk_size = 16
+    chunk_size = 64
     while remaining > 0:
-        if remaining < 16:
+        if remaining < chunk_size:
             chunk_size = remaining
         dat = nvram.read(chunk_size)
         cyw_write_backplane_bytes(address, dat, chunk_size)
@@ -644,11 +645,11 @@ def write_bt_firmware():
 
     for i in range(0, num_recs):
         data_in   = btfw.read(4)
-        block_len = int(data_in[0]) 
+        block_len = int(data_in[0])
         addr_low  = int(data_in[2]) | (int(data_in[1]) << 8)
         type      = int(data_in[3])
         addr      = addr_high + addr_low
-    
+
         if type == TYPE_EXTENDED_ADDRESS:
             data_in = btfw.read(block_len)
             addr_high =  (int(data_in[0]) << 24) | (int(data_in[1]) << 16)
@@ -657,7 +658,7 @@ def write_bt_firmware():
             # type 0 or type 1  - type 1 still triggers this final write so it is lucky the files ends with a type 1
             if addr != my_addr + buf_ind:
                 if buf_ind != 0:
-                    #print("Write address %8x size %4u - final"%(my_addr, buf_ind))  
+                    #print("Write address %8x size %4u - final, %8x"%(my_addr, buf_ind, my_addr + buf_ind - 1))  
                     #print_hex("Buffer", buf)
 
                     cyw_write_backplane_bytes(BTFW_MEM_OFFSET + my_addr, bytes(buf), len(buf))
@@ -866,6 +867,7 @@ class CYW:
         power_off()
 
     def send_raw(self, dat):
+        base = self.wifi_base
         # need to add prefix of 3 bytes of length and padding at end to make this word aligned
         size = len(dat)
         length_bytes = u32_to_le_bytes(size - 1)[0:3]  # length (excluding the HCI command byte), trimmed to three bytes
@@ -876,33 +878,37 @@ class CYW:
         buf = length_bytes + dat + padding             # length prefix + data + padding
         buf_len = len(buf)
     
-        send_head = cyw_read_backplane_reg_u32(self.wifi_base + SEND_HEAD)
-        send_tail = cyw_read_backplane_reg_u32(self.wifi_base + SEND_TAIL)
+        send_head = cyw_read_backplane_reg_u32(base + SEND_HEAD)
+        send_tail = cyw_read_backplane_reg_u32(base + SEND_TAIL)
     
-        cyw_write_backplane_bytes(self.wifi_base + H2BT_BUFFER + send_tail, buf, buf_len)
-        cyw_write_backplane_reg_u32(self.wifi_base + SEND_HEAD, send_tail + buf_len)
+        cyw_write_backplane_bytes(base + H2BT_BUFFER + send_head, buf, buf_len)
+        cyw_write_backplane_reg_u32(base + SEND_HEAD, send_tail + buf_len)
         data_send_toggle()
 
     def receive_raw(self):
-        receive_head = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_HEAD)
-        receive_tail = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_TAIL)
+        base = self.wifi_base
+        receive_head = cyw_read_backplane_reg_u32(base + RECEIVE_HEAD)
+        receive_tail = cyw_read_backplane_reg_u32(base + RECEIVE_TAIL)
 
-        dat = cyw_read_backplane_bytes(self.wifi_base + BT2H_BUFFER + receive_tail, receive_head - receive_tail)
-        data_send_toggle() 
-        cyw_write_backplane_reg_u32(self.wifi_base + RECEIVE_TAIL, receive_head) # move tail to head, clearing read buffer
+        dat = cyw_read_backplane_bytes(base + BT2H_BUFFER + receive_tail, receive_head - receive_tail)
+        #data_send_toggle() 
+        cyw_write_backplane_reg_u32(base + RECEIVE_TAIL, receive_head) # move tail to head, clearing read buffer
         data_send_toggle()
     
         leng = le_bytes_to_u32(dat[0:3])     # get length from first 3 bytes
         return dat[3:3 + leng + 1]           # trim off length 3 byte header and padding bytes trailer
 
     def readable(self):
+        base = self.wifi_base
         read = cyw_read_backplane_reg_u32(SDIO_INT_STATUS);
         data_there = (read & I_HMB_FC_CHANGE != 0)
         if data_there:
             cyw_write_backplane_reg_u32(SDIO_INT_STATUS, read & I_HMB_FC_CHANGE)
             # do double check to make sure data is there in buffer
-            receive_head = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_HEAD)
-            receive_tail = cyw_read_backplane_reg_u32(self.wifi_base + RECEIVE_TAIL)
+            receive_head = cyw_read_backplane_reg_u32(base + RECEIVE_HEAD)
+            receive_tail = cyw_read_backplane_reg_u32(base + RECEIVE_TAIL)
             if receive_head == receive_tail:
                 data_there = False
         return data_there
+        
+        
